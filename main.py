@@ -1,3 +1,6 @@
+import os
+from dotenv import load_dotenv
+load_dotenv()
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
 from telegram.ext import (
     ApplicationBuilder,
@@ -6,6 +9,7 @@ from telegram.ext import (
     ContextTypes
 )
 
+TOKEN = os.getenv("BOT_TOKEN")
 
 # Стартове меню з кнопками
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -131,7 +135,7 @@ async def set_bot_commands(app):
 
 # Запуск бота
 if __name__ == '__main__':
-    app = ApplicationBuilder().token("7957343879:AAEx4rDk3YUpq0E3ZpKhhK4d7t5uIhgHXbk").build()
+    app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("prices", prices_command))
