@@ -1,3 +1,5 @@
+import asyncio
+import nest_asyncio
 import os
 import threading
 from dotenv import load_dotenv
@@ -155,12 +157,23 @@ def healthcheck():
 def run_api():
     uvicorn.run(app_api, host="0.0.0.0", port=8080)
 
+async def keep_awake():
+    while True:
+        try:
+            async with httpx.AsyncClient() as client:
+                await client.get("http://localhost:8080")  # або свій повний Fly.io-URL
+                print("[KEEP_ALIVE] Ping sent to self.")
+        except Exception as e:
+            print(f"[KEEP_ALIVE] Error: {e}")
+        await asyncio.sleep(240)
+
+
+nest_asyncio.apply()
+
 # --- Основна точка запуску ---
 if __name__ == '__main__':
-    # Запускаємо FastAPI сервер в окремому потоці
     threading.Thread(target=run_api, daemon=True).start()
 
-    # Запускаємо Telegram-бота
     app = ApplicationBuilder().token(TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
@@ -168,7 +181,13 @@ if __name__ == '__main__':
     app.add_handler(CommandHandler("about", about_command))
     app.add_handler(CallbackQueryHandler(handle_callback))
 
-    app.post_init = set_bot_commands
-
     print("Бот запущено...")
-    app.run_polling()
+
+    async def main():
+        await set_bot_commands(app)
+        asyncio.create_task(keep_awake())
+        await app.run_polling()
+
+    loop = asyncio.get_event_loop()
+    loop.create_task(main())
+    loop.run_forever()

@@ -1,9 +1,9 @@
-# fly.toml app configuration file generated for tg-bot-spring-snow-3969 on 2025-06-20T23:23:17+03:00
+# fly.toml app configuration file generated for tg-bot-cool-wave-5250 on 2025-06-23T11:55:09+03:00
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'tg-bot-spring-snow-3969'
+app = 'tg-bot-cool-wave-5250'
 primary_region = 'waw'
 
 [build]
