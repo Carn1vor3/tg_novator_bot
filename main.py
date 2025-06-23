@@ -12,6 +12,8 @@ from telegram.ext import (
 
 from fastapi import FastAPI
 import uvicorn
+import httpx
+
 
 load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
@@ -21,6 +23,7 @@ TOKEN = os.getenv("BOT_TOKEN")
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("📋 Прайси", callback_data='show_prices')],
+        [InlineKeyboardButton("$ Курс валют", callback_data='show_exchange')],
         [InlineKeyboardButton("ℹ️ Про бота", callback_data='about_bot')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -36,9 +39,31 @@ async def prices_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("ЖК Сенсація", callback_data='price_sensation')],
         [InlineKeyboardButton("ЖК Фаворит Преміум", callback_data='price_favorit_premium')],
         [InlineKeyboardButton("ЖК Utlandia", callback_data='price_utlandia')],
+        [InlineKeyboardButton("ЖК Millenium park", callback_data='price_millenium_park')],
+        [InlineKeyboardButton("ЖК Millenium state", callback_data='price_millenium_state')],
+
         [InlineKeyboardButton("⬅️ Назад", callback_data='back_to_main')],
     ]
     await update.message.reply_text("Оберіть об'єкт:", reply_markup=InlineKeyboardMarkup(keyboard))
+
+async def show_exchange_rates(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get("https://bank.gov.ua/NBUStatService/v1/statdirectory/exchange?json")
+            data = response.json()
+
+        # Обираємо потрібні валюти
+        target_currencies = ['USD', 'EUR', 'PLN']
+        text = "💱 *Курс валют НБУ:*\n\n"
+        for currency in data:
+            if currency['cc'] in target_currencies:
+                text += f"*{currency['cc']}* ➤ {currency['rate']} ₴\n"
+
+        await update.callback_query.edit_message_text(text, parse_mode="Markdown")
+    except Exception as e:
+        await update.callback_query.edit_message_text("Помилка при отриманні курсу валют 😥")
+        print(f"[ERROR] Currency API: {e}")
+
 
 async def about_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (
@@ -61,6 +86,9 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'price_sensation': "💡 Прайс для ЖК Сенсація:\n https://drive.google.com/drive/folders/1CHn3YjkNm323AzO-LzklVsWTNTJkhT_2",
         'price_favorit_premium': "🏘️ Прайс для ЖК Фаворит Преміум:\n https://docs.google.com/spreadsheets/d/1GMPSnL5pYiohMLD3ko9OQoh-maW1zT9X/edit?gid=1313105543#gid=1313105543",
         'price_utlandia': "🏙 Прайс для ЖК Utlandia:\n https://flatris.com.ua/public/chess/?ut=web&cid=d5AO30RbA0GRwJE&",
+        'price_millenium_park': "🏙 Прайс для ЖК Millenium park:\n https://docs.google.com/spreadsheets/d/1tUw14JU8qS4Zzzl6Z-aLZHv_tgcV_dN_/edit?gid=1913165838#gid=1913165838",
+        'price_millenium_state': "🏙 Прайс для ЖК Millenium state:\n https://docs.google.com/spreadsheets/d/1tUw14JU8qS4Zzzl6Z-aLZHv_tgcV_dN_/edit?gid=266656817#gid=266656817",
+
     }
 
     if query.data == 'show_prices':
@@ -79,12 +107,19 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("ЖК Сенсація", callback_data='price_sensation')],
             [InlineKeyboardButton("ЖК Фаворит Преміум", callback_data='price_favorit_premium')],
             [InlineKeyboardButton("ЖК Utlandia", callback_data='price_utlandia')],
+            [InlineKeyboardButton("ЖК Millenium park", callback_data='price_millenium_park')],
+            [InlineKeyboardButton("ЖК Millenium state", callback_data='price_millenium_state')],
+
             [InlineKeyboardButton("⬅️ Назад", callback_data='back_to_main')],
         ]
         await query.edit_message_text("Оберіть об'єкт:", reply_markup=InlineKeyboardMarkup(keyboard))
 
     elif query.data in prices_links:
         await query.message.reply_text(prices_links[query.data])
+
+    elif query.data == 'show_exchange':
+        await show_exchange_rates(update, context)
+
 
     elif query.data == 'about_bot':
         text = (
@@ -97,6 +132,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data == 'back_to_main':
         keyboard = [
             [InlineKeyboardButton("📋 Прайси", callback_data='show_prices')],
+            [InlineKeyboardButton("$ Курс валют", callback_data='show_exchange')],
             [InlineKeyboardButton("ℹ️ Про бота", callback_data='about_bot')]
         ]
         await query.edit_message_text("Повертаємось до головного меню:", reply_markup=InlineKeyboardMarkup(keyboard))
